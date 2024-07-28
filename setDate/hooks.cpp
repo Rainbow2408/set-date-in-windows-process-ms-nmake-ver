@@ -33,8 +33,10 @@ int attach(PVOID func, PVOID* real, PVOID hook) {
    return 1;
 }
 
-
-BOOL WINAPI DllMain(HINSTANCE i, DWORD dwReason, LPVOID l) {
+BOOL WINAPI DllMain(HINSTANCE hModule, DWORD dwReason, LPVOID lpReserved)
+{
+   (void)hModule;
+   (void)lpReserved;
 
    switch ( dwReason ) {
 
@@ -42,7 +44,7 @@ BOOL WINAPI DllMain(HINSTANCE i, DWORD dwReason, LPVOID l) {
 
          for (HMODULE hMod = NULL; (hMod = DetourEnumerateModules(hMod)) != NULL;) {
              ULONG cbData;
-             PVOID pvData = DetourFindPayload(hMod, &payload, &cbData);
+             PVOID pvData = DetourFindPayload(hMod, payload, &cbData);
        
              if (pvData != NULL) {
                  pFakeLocalTime = (LPSYSTEMTIME) pvData;
@@ -69,7 +71,7 @@ BOOL WINAPI DllMain(HINSTANCE i, DWORD dwReason, LPVOID l) {
             return FALSE; 
          }
 
-         HMODULE kernelBase = GetModuleHandle("kernelbase.dll");
+         HMODULE kernelBase = GetModuleHandleW(L"kernelbase.dll");
          GetSystemTime_func GetSystemTime_ = (GetSystemTime_func) GetProcAddress(kernelBase, "GetSystemTime");
          GetLocalTime_func  GetLocalTime_  = (GetLocalTime_func ) GetProcAddress(kernelBase, "GetLocalTime" );
 

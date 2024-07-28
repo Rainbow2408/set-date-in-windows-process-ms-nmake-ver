@@ -1,30 +1,48 @@
-DETOURS_SRC=Detours/src
+##############################################################################
+##
+##  Makefile for Detours Programs.
+##
 
-all: setDate.dll setDate.exe
+!include ..\common.mak
 
-setDate.dll:  hooks.o Detours.o disasm.o modules.o
-	g++ -shared hooks.o Detours.o disasm.o modules.o -lntdll     -o setDate.dll
+LIBS=$(LIBS) kernel32.lib
+CFLAGS=$(CFLAGS) /EHsc
 
-setDate.exe: setDate.o creatwth.o Detours.o disasm.o modules.o
-	g++        setDate.o creatwth.o Detours.o disasm.o modules.o -o setDate.exe
+all: dirs \
+    $(BIND)\setDate.dll \
+    $(BIND)\setDate.exe
 
-hooks.o : hooks.c setDate.h
-	gcc -I$(DETOURS_SRC) -std=c99 -c hooks.c
+clean:
+    -del *~ *.obj *.sbr 2> nul
+    -del $(BIND)\setDate.* $(BIND)\setDate*.* 2> nul
+    -rmdir /q /s $(OBJD) 2>nul
+	
+realclean: clean
+    -rmdir /q /s $(OBJDS) 2>nul
+	
+dirs:
+    @if not exist $(BIND) mkdir $(BIND) && echo.   Created $(BIND)
+    @if not exist $(OBJD) mkdir $(OBJD) && echo.   Created $(OBJD)
 
-Detours.o : $(DETOURS_SRC)/Detours.cpp
-	g++ -I$(DETOURS_SRC) -c $(DETOURS_SRC)/Detours.cpp
+$(OBJD)\hooks.obj : hooks.cpp setDate.h
+    cl $(CFLAGS) /c /Fo$(OBJD)\hooks.obj hooks.cpp
 
-disasm.o : $(DETOURS_SRC)/disasm.cpp
-	g++ -I$(DETOURS_SRC) -c $(DETOURS_SRC)/disasm.cpp
+$(OBJD)\setDate.obj : setDate.cpp setDate.h
+    cl $(CFLAGS) /c /Fo$(OBJD)\setDate.obj setDate.cpp
 
-modules.o : $(DETOURS_SRC)/modules.cpp
-	g++ -I$(DETOURS_SRC) -c $(DETOURS_SRC)/modules.cpp
+$(BIND)\setDate.dll $(BIND)\setDate.lib: \
+        $(OBJD)\hooks.obj $(DEPS)
+    cl /LD $(CFLAGS) /Fe$(@R).dll /Fd$(@R).pdb \
+        $(OBJD)\hooks.obj \
+        /link $(LINKFLAGS) /DLL /subsystem:console \
+        /export:GetSystemTime_hook \
+        /export:GetLocalTime_hook \
+        $(LIBS)
 
-creatwth.o : $(DETOURS_SRC)/creatwth.cpp
-	g++ -I$(DETOURS_SRC) -c $(DETOURS_SRC)/creatwth.cpp
-
-setDate.o: setDate.c setDate.h
-	gcc -I$(DETOURS_SRC) -c setDate.c
+$(BIND)\setDate.exe : $(OBJD)\setDate.obj $(BIND)\setDate.lib $(DEPS)
+    cl $(CFLAGS) /Fe$@ /Fd$(@R).pdb $(OBJD)\setDate.obj \
+        /link $(LINKFLAGS) $(LIBS) \
+        /subsystem:console /fixed:no $(BIND)\setDate.lib
 
 # test-target.exe: test-target.o
 # 	gcc target.o -o test-target.exe
